@@ -1,39 +1,96 @@
 import { ArrowUturnLeftIcon } from "@heroicons/react/16/solid";
-import { Link } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { Formik, Field, Form } from "formik";
+import { ToastContainer, toast } from "react-toastify";
 import * as Yup from "yup";
 
 import StyleErrorMsg from "./StyleErrorMsg";
+import { useEffect, useState } from "react";
+
 const NoteForm = ({ isCreate }) => {
-  const initialValue = {
-    title: "",
-    content: "",
+  const [redirect, setRedirect] = useState(false);
+  const [oldNote, setOldNote] = useState({});
+  const { id } = useParams();
+
+  const getOldNote = async () => {
+    const response = await fetch(`${import.meta.env.VITE_API}/edit/` + id);
+    if (response.status === 200) {
+      const note = await response.json();
+      setOldNote(note);
+    } else {
+      setRedirect(true);
+    }
   };
+
+  useEffect((_) => {
+    if (!isCreate) {
+      getOldNote();
+    }
+  }, []);
+
+  const initialValues = {
+    title: isCreate ? "" : oldNote.title,
+    content: isCreate ? "" : oldNote.content,
+    noteId: isCreate ? "" : oldNote._id,
+
+  };
+
   const NoteFormSchema = Yup.object({
     title: Yup.string()
       .min(5, "Title must have at least five words")
       .max(30, "Title is loo long")
       .required("Title must be needed"),
-      content: Yup.string().min(10, "Content is too short."),
+    content: Yup.string().min(10, "Content is too short."),
   });
 
-  // const validate = (values) => {
-  //   const errors = {};
-
-  //   if (values.title.trim().length < 5) {
-  //     errors.title = "Title must have at least five words.";
-  //   }
-
-  //   if (values.content.trim().length < 10) {
-  //     errors.content = "Content must have at least ten words.";
-  //   }
-  //   return errors;
-  // };
-  const submitHandler = (values) => {
-    console.log(values);
+  const submitHandler = async (values) => {
+    let API =`${import.meta.env.VITE_API}`;
+    if(isCreate){
+      API = `${import.meta.env.VITE_API}/create`
+    }else{
+      API = `${import.meta.env.VITE_API}/edit`
+    }
+      const response = await fetch(API, {
+        method: "post",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      if (response.status === 201 || response.status ===200) {
+        setRedirect(true);
+      } else {
+        toast.error("Something went wrong!", {
+          position: "bottom-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored",
+          transition: Bounce,
+        });
+      }
   };
+
+  if (redirect) {
+    return <Navigate to={"/"} />;
+  }
+
   return (
     <section>
+      <ToastContainer
+        position="bottom-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+        transition="Bounce"
+      />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold mb-5">
           {isCreate ? "Create new note." : "Edit your note."}
@@ -44,9 +101,10 @@ const NoteForm = ({ isCreate }) => {
       </div>
 
       <Formik
-        initialValues={initialValue}
+        initialValues={initialValues}
         validationSchema={NoteFormSchema}
         onSubmit={submitHandler}
+        enableReinitialize={true}
       >
         {() => (
           <Form action="">
@@ -76,12 +134,13 @@ const NoteForm = ({ isCreate }) => {
               />
               <StyleErrorMsg name="content" />
             </div>
+            <Field type ="text" name="noteId" id="noteId" hidden/>
             <div className="flex items-center gap-5 mt-3">
               <button
                 type="submit"
                 className="text-white bg-teal-600 py-3 font-medium w-60 text-center rounded"
               >
-                Save
+                {isCreate ? "Share" : "Update"}
               </button>
               <button className="text-white bg-cyan-600 py-3 font-medium w-40 text-center rounded">
                 Cancel
