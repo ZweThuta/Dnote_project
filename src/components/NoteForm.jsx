@@ -1,16 +1,18 @@
-import { ArrowUturnLeftIcon } from "@heroicons/react/16/solid";
+import { ArrowUturnLeftIcon, ArrowUpTrayIcon } from "@heroicons/react/16/solid";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { Formik, Field, Form } from "formik";
 import { ToastContainer, toast } from "react-toastify";
 import * as Yup from "yup";
 
 import StyleErrorMsg from "./StyleErrorMsg";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const NoteForm = ({ isCreate }) => {
   const [redirect, setRedirect] = useState(false);
   const [oldNote, setOldNote] = useState({});
   const { id } = useParams();
+  const fileRef = useRef();
+  const [previewImg, setPreviewImg] = useState(null);
 
   const getOldNote = async () => {
     const response = await fetch(`${import.meta.env.VITE_API}/edit/` + id);
@@ -32,44 +34,73 @@ const NoteForm = ({ isCreate }) => {
     title: isCreate ? "" : oldNote.title,
     content: isCreate ? "" : oldNote.content,
     noteId: isCreate ? "" : oldNote._id,
-
+    cover_image: isCreate ? null : oldNote.cover_image,
   };
 
+  const SUPPORTED_FORMATS = ["image/png", "image/jpg", "image/jpeg"];
   const NoteFormSchema = Yup.object({
     title: Yup.string()
       .min(5, "Title must have at least five words")
       .max(30, "Title is loo long")
       .required("Title must be needed"),
     content: Yup.string().min(10, "Content is too short."),
+    cover_image: Yup.mixed()
+      .nullable()
+      .test(
+        "FILE_FORMAT",
+        "File type is not support!",
+        (value) => !value || SUPPORTED_FORMATS.includes(value.type)
+      ),
   });
 
   const submitHandler = async (values) => {
-    let API =`${import.meta.env.VITE_API}`;
-    if(isCreate){
-      API = `${import.meta.env.VITE_API}/create`
-    }else{
-      API = `${import.meta.env.VITE_API}/edit`
+    let API = `${import.meta.env.VITE_API}`;
+    if (isCreate) {
+      API = `${import.meta.env.VITE_API}/create`;
+    } else {
+      API = `${import.meta.env.VITE_API}/edit`;
     }
-      const response = await fetch(API, {
-        method: "post",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+    
+    const formData = new FormData();
+    formData.append("title",values.title);
+    formData.append("content",values.content);
+    formData.append("cover_image",values.cover_image);
+    formData.append("note_id",values.note_id);
+
+    const response = await fetch(API, {
+      method: "post",
+      // headers: { "Content-Type": "multipart/form-data" },
+      body: formData,
+    });
+
+    if (response.status === 201 || response.status === 200) {
+      setRedirect(true);
+    } else {
+      toast.error("Something went wrong!", {
+        position: "bottom-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        transition: Bounce,
       });
-      if (response.status === 201 || response.status ===200) {
-        setRedirect(true);
-      } else {
-        toast.error("Something went wrong!", {
-          position: "bottom-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "colored",
-          transition: Bounce,
-        });
-      }
+    }
+  };
+
+  const handleImageChange = (event, setFieldValue) => {
+    const selectedImage = event.target.files[0];
+    if (selectedImage) {
+      setPreviewImg(URL.createObjectURL(selectedImage));
+      setFieldValue("cover_image", selectedImage);
+    }
+  };
+
+  const clearPreImg = (setFieldValue) => {
+    setPreviewImg(null);
+    setFieldValue("cover_image", null);
   };
 
   if (redirect) {
@@ -106,8 +137,8 @@ const NoteForm = ({ isCreate }) => {
         onSubmit={submitHandler}
         enableReinitialize={true}
       >
-        {() => (
-          <Form action="">
+        {({ errors, touched, values, setFieldValue }) => (
+          <Form encType="multipart/form-data">
             <div className="mb-3">
               <label htmlFor="title" className="font-large block pb-2">
                 Title
@@ -120,6 +151,48 @@ const NoteForm = ({ isCreate }) => {
               />
               <StyleErrorMsg name="title" />
             </div>
+
+            <div className="mb-3">
+              <label htmlFor="cover_image" className="font-large block pb-2">
+                Cover Image
+                <span className="text-xs font-medium">opitional</span>
+              </label>
+              {previewImg && (
+                <p
+                  className="text-sm font-medium mt-1 mb-1 cursor-pointer"
+                  onClick={(_) => {
+                    clearPreImg(setFieldValue);
+                  }}
+                >
+                  Clear
+                </p>
+              )}
+              <input
+                type="file"
+                name="cover_image"
+                hidden
+                ref={fileRef}
+                onChange={(e) => {
+                  handleImageChange(e, setFieldValue);
+                }}
+              />
+
+              <div
+                className="border border-dashed h-80 border-teal-600 flex items-center justify-center text-teal-600 cursor-pointer relative overflow-hidden"
+                onClick={() => fileRef.current.click()}
+              >
+                <ArrowUpTrayIcon width={30} height={30} className="z-20" />
+                {previewImg && (
+                  <img
+                    src={previewImg}
+                    alt={"Preview Image"}
+                    className="w-full absolute top-0 left-0 h-full object-cover opacity-65 z-10"
+                  />
+                )}
+              </div>
+              <StyleErrorMsg name="cover_image"/>
+            </div>
+
             <div className="">
               <label htmlFor="content" className="font-large block pb-2">
                 Content
@@ -134,7 +207,7 @@ const NoteForm = ({ isCreate }) => {
               />
               <StyleErrorMsg name="content" />
             </div>
-            <Field type ="text" name="noteId" id="noteId" hidden/>
+            {/* <Field type="text" name="noteId" id="noteId" hidden /> */}
             <div className="flex items-center gap-5 mt-3">
               <button
                 type="submit"

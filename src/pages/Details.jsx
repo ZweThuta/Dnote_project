@@ -46,8 +46,9 @@ const Details = () => {
             >
               Back
             </Link>
+            
           </div>
-          <div className="w-2/5 border-t-4 border-t-teal-600 shadow-lg p-3 mt-4">
+          <div className="w-90 border-t-4 border-t-teal-600 shadow-lg p-10 mt-4">
             <h3 className="text-3xl font-large">{note.title}</h3>
             <div className="flex gap-4 my-2">
               <p className="flex items-center gap-2 font-medium text-gray-600">
@@ -63,7 +64,14 @@ const Details = () => {
                 </p>
               )}
             </div>
-            <p className="text-base mt-2">{note.content}</p>
+            {note.cover_image !== "false" && (
+              <img
+                src={`${import.meta.env.VITE_API}/${note.cover_image}`}
+                alt={note.title}
+                className="my-10 h-60 w-full object-cover"
+              />
+            )}
+            <p className="text-base mt-2 text-justify text-pretty">&nbsp;&nbsp;&nbsp;{note.content}</p>
           </div>
         </section>
       )}
