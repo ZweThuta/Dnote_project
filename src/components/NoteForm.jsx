@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 const NoteForm = ({ isCreate }) => {
   const [redirect, setRedirect] = useState(false);
   const [oldNote, setOldNote] = useState({});
+  const [isUpload, setIsUpload] = useState(false);
   const { id } = useParams();
   const fileRef = useRef();
   const [previewImg, setPreviewImg] = useState(null);
@@ -60,16 +61,15 @@ const NoteForm = ({ isCreate }) => {
     } else {
       API = `${import.meta.env.VITE_API}/edit`;
     }
-    
+
     const formData = new FormData();
-    formData.append("title",values.title);
-    formData.append("content",values.content);
-    formData.append("cover_image",values.cover_image);
-    formData.append("note_id",values.note_id);
+    formData.append("title", values.title);
+    formData.append("content", values.content);
+    formData.append("cover_image", values.cover_image);
+    formData.append("note_id", values.note_id);
 
     const response = await fetch(API, {
       method: "post",
-      // headers: { "Content-Type": "multipart/form-data" },
       body: formData,
     });
 
@@ -101,6 +101,9 @@ const NoteForm = ({ isCreate }) => {
   const clearPreImg = (setFieldValue) => {
     setPreviewImg(null);
     setFieldValue("cover_image", null);
+    if (isCreate) {
+      fileRef.current.value = null;
+    }
   };
 
   if (redirect) {
@@ -151,47 +154,89 @@ const NoteForm = ({ isCreate }) => {
               />
               <StyleErrorMsg name="title" />
             </div>
-
-            <div className="mb-3">
-              <label htmlFor="cover_image" className="font-large block pb-2">
-                Cover Image
-                <span className="text-xs font-medium">opitional</span>
-              </label>
-              {previewImg && (
+            {
+              isUpload ?(<>
                 <p
-                  className="text-sm font-medium mt-1 mb-1 cursor-pointer"
-                  onClick={(_) => {
-                    clearPreImg(setFieldValue);
-                  }}
+                  className="text-base font-medium cursor-pointer text-teal-600"
+                  onClick={(_) => setIsUpload(false)}
                 >
-                  Clear
+                  Hide Cover Image
                 </p>
-              )}
-              <input
-                type="file"
-                name="cover_image"
-                hidden
-                ref={fileRef}
-                onChange={(e) => {
-                  handleImageChange(e, setFieldValue);
-                }}
-              />
+              </>):(
+                <>
+                  <p
+                    className="text-base font-medium cursor-pointer text-teal-600"
+                    onClick={(_) => setIsUpload(true)}
+                  >
+                    Upload Cover Image
+                  </p>
+                </>
+              )
+            }
 
-              <div
-                className="border border-dashed h-80 border-teal-600 flex items-center justify-center text-teal-600 cursor-pointer relative overflow-hidden"
-                onClick={() => fileRef.current.click()}
-              >
-                <ArrowUpTrayIcon width={30} height={30} className="z-20" />
-                {previewImg && (
-                  <img
-                    src={previewImg}
-                    alt={"Preview Image"}
-                    className="w-full absolute top-0 left-0 h-full object-cover opacity-65 z-10"
+            {isUpload && (
+              <div>
+                <div className="mb-3">
+                  <label
+                    htmlFor="cover_image"
+                    className="font-large block pb-2"
+                  >
+                    Cover Image
+                    <span className="text-xs font-medium">&nbsp;opitional</span>
+                  </label>
+                  {previewImg && (
+                    <p
+                      className="text-sm font-medium mt-1 mb-1 cursor-pointer"
+                      onClick={(_) => {
+                        clearPreImg(setFieldValue);
+                      }}
+                    >
+                      Clear
+                    </p>
+                  )}
+                  <input
+                    type="file"
+                    name="cover_image"
+                    hidden
+                    ref={fileRef}
+                    onChange={(e) => {
+                      handleImageChange(e, setFieldValue);
+                    }}
                   />
-                )}
+
+                  <div
+                    className="border border-dashed h-80 border-teal-600 flex items-center justify-center text-teal-600 cursor-pointer relative overflow-hidden"
+                    onClick={() => fileRef.current.click()}
+                  >
+                    <ArrowUpTrayIcon width={30} height={30} className="z-20" />
+                    {isCreate ? (
+                      <>
+                        {previewImg && (
+                          <img
+                            src={previewImg}
+                            alt={"Preview Image"}
+                            className="w-full absolute top-0 left-0 h-full object-cover opacity-65 z-10"
+                          />
+                        )}
+                      </>
+                    ) : (
+                      <img
+                        src={
+                          previewImg
+                            ? previewImg
+                            : `${import.meta.env.VITE_API}/${
+                                oldNote.cover_image
+                              }`
+                        }
+                        alt={"Preview Image"}
+                        className="w-full absolute top-0 left-0 h-full object-cover opacity-65 z-10"
+                      />
+                    )}
+                  </div>
+                  <StyleErrorMsg name="cover_image" />
+                </div>
               </div>
-              <StyleErrorMsg name="cover_image"/>
-            </div>
+            ) }
 
             <div className="">
               <label htmlFor="content" className="font-large block pb-2">
