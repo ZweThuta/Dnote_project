@@ -2,7 +2,7 @@ import { ErrorMessage } from "formik";
 
 const StyleErrorMsg = ({name}) => {
   return (
-    <div className="text-red-600 font-medium ">
+    <div className="text-red-600 font-bold ">
       <ErrorMessage name={name}/>
     </div>
   );
